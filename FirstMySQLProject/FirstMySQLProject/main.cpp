@@ -18,6 +18,7 @@ using std::string;
 using std::vector;
 using std::istringstream;
 using std::getline;
+using std::stoi;
 
 struct SOCKET_INFO { // 연결된 소켓 정보에 대한 틀 생성
 	SOCKET sck;
@@ -38,6 +39,7 @@ void send_msg(const char* msg); // send() 함수 실행됨. 자세한 내용은 함수 구현부
 void recv_msg(int idx); // recv() 함수 실행됨. 자세한 내용은 함수 구현부에서 확인.
 void del_client(int idx); // 소켓에 연결되어 있는 client를 제거하는 함수. closesocket() 실행됨. 자세한 내용은 함수 구현부에서 확인.
 void database(string userID, string userPassword, string userName);
+void check_command();//입력받은 데이터의 헤더값을 통해 원하는 동작을 하게 하는 함수
 
 int main()
 {
@@ -58,10 +60,12 @@ int main()
 		}
 		//std::thread th1(add_client); // 이렇게 하면 하나의 client만 받아짐...
 
+		//check_command();
+
 		while (1) { // 무한 반복문을 사용하여 서버가 계속해서 채팅 보낼 수 있는 상태를 만들어 줌. 반복문을 사용하지 않으면 한 번만 보낼 수 있음.
 			string text, msg = "";
 
-			std::getline(cin, text);
+			getline(cin, text);
 			const char* buf = text.c_str();
 			msg = server_sock.user + " : " + buf;
 			send_msg(msg.c_str());
@@ -86,8 +90,88 @@ int main()
 	return 0;
 
 }
+class DATABASE {
+private:
+	sql::mysql::MySQL_Driver* driver; // 추후 해제하지 않아도 Connector/C++가 자동으로 해제해 줌
+	sql::Connection* con;
+	sql::Statement* stmt;
+	sql::ResultSet* res;
+	sql::PreparedStatement* pstmt;
+public:
+	DATABASE() {
+		try {
+			driver = sql::mysql::get_mysql_driver_instance();
+			con = driver->connect(server, username, password);
+		}
+		catch (sql::SQLException& e) {
+			cout << "Could not connect to server. Error message: " << e.what() << endl;
+			exit(1);
+		}
 
-void database(string userID, string userPassword , string userName) {
+		// 데이터베이스 선택
+		con->setSchema("chattingProject");
+		// db 한글 저장을 위한 셋팅 
+		stmt = con->createStatement();
+		stmt->execute("set names euckr");
+		if (stmt) { delete stmt; stmt = nullptr; }
+	};
+
+};
+
+//데이터 베이스에 대한 함수를 클래스로 선언하고 각 용도에 맞는 함수를 생성해야함
+
+class DB {
+	sql::mysql::MySQL_Driver* driver; // 추후 해제하지 않아도 Connector/C++가 자동으로 해제해 줌
+	sql::Connection* con;
+	sql::Statement* stmt;
+	sql::ResultSet* res;
+	sql::PreparedStatement* pstmt;
+	const string server = "tcp://127.0.0.1:3306";
+	const string username = "root";
+	const string password = "qpwoei13";
+public:
+	DB() {
+		try {
+			driver = sql::mysql::get_mysql_driver_instance();
+			con = driver->connect(server, username, password);
+		}
+		catch (sql::SQLException& e) {
+			cout << "Could not connect to server. Error message: " << e.what() << endl;
+			exit(1);
+		}
+		con->setSchema("test");
+		// db 한글 저장을 위한 셋팅
+		stmt = con->createStatement();
+		stmt->execute("set names euckr");
+		if (stmt) { delete stmt; stmt = nullptr; }
+	}
+	void call() {
+		stmt = con->createStatement();
+		res = stmt->executeQuery("SELECT * FROM roomlist");
+		while (res->next()) {
+			std::cout << "ID: " << res->getInt("id") << ", ";
+			std::cout << "이름: " << res->getString("name") << std::endl;
+		}
+		if (stmt) { delete stmt; stmt = nullptr; }
+	}
+	void insert(string tablename, string a, string b) {
+		string say = "INSERT INTO " + tablename + a + " VALUES" + b;
+		//pstmt = con->prepareStatement("INSERT INTO inventory(name, quantity) VALUES(?,?)");
+		pstmt = con->prepareStatement(say);
+		//pstmt->setString(1, "banana");
+		pstmt->execute();
+		cout << "One row inserted." << endl;
+		if (pstmt) { delete pstmt; pstmt = nullptr; }
+	}
+	~DB() {
+		if (stmt) { delete stmt; }
+		if (res) { delete res; }
+		if (pstmt) { delete pstmt; }
+		if (con) { delete con; }
+	}
+};
+
+void database(string userID, string userPassword, string userName) {
 	// MySQL Connector/C++ 초기화
 	sql::mysql::MySQL_Driver* driver; // 추후 해제하지 않아도 Connector/C++가 자동으로 해제해 줌
 	sql::Connection* con;
@@ -164,18 +248,22 @@ void server_init() {
 	cout << "Server On" << endl;
 }
 
+//void check_command() {
+//	vector<string> tokens;
+//}
+
 void add_client() {
 	vector<string> tokens;
-	string id;
+	/*string id;
 	string pw;
-	string name;
+	string name;*/
 
 	SOCKADDR_IN addr = {};
 	int addrsize = sizeof(addr);
 	char data[MAX_SIZE] = { };
-	char userID[MAX_SIZE] = { };
+	/*char userID[MAX_SIZE] = { };
 	char userPassword[MAX_SIZE] = { };
-	char userName[MAX_SIZE] = { };
+	char userName[MAX_SIZE] = { };*/
 
 	ZeroMemory(&addr, addrsize); // addr의 메모리 영역을 0으로 초기화
 
@@ -188,36 +276,39 @@ void add_client() {
 	while (getline(ss, token, '#')) {
 		tokens.push_back(token);
 	}
-	if (tokens.size() >= 7) {
+	if (stoi(tokens[0]) == 2) {
 		// 각 데이터 값을 변수에 할당
-		int intValue1 = std::stoi(tokens[0]);//cmd
-		string stringValue1 = tokens[1];//id
-		int intValue2 = std::stoi(tokens[2]);//pw
-		string stringValue2 = tokens[3];//name
-		int intValue3 = std::stoi(tokens[4]);//room_num
-		string stringValue3 = tokens[5];//room_name
-		string stringValue4 = tokens[6];//chatting_log
+		database(tokens[1], tokens[2], tokens[3]);
+		//int intValue1 = std::stoi(tokens[0]);//cmd
+		//string stringValue1 = tokens[1];//id
+		//int intValue2 = std::stoi(tokens[2]);//pw
+		//string stringValue2 = tokens[3];//name
+		//int intValue3 = std::stoi(tokens[4]);//room_num
+		//string stringValue3 = tokens[5];//room_name
+		//string stringValue4 = tokens[6];//chatting_log
 
-		// 변수 값 출력
-		cout << "intValue1: " << intValue1 << std::endl;
-		cout << "stringValue1: " << stringValue1 << std::endl;
-		cout << "intValue2: " << intValue2 << std::endl;
-		cout << "stringValue2: " << stringValue2 << std::endl;
-		cout << "intValue3: " << intValue3 << std::endl;
-		cout << "stringValue3: " << stringValue3 << std::endl;
-		cout << "stringValue4: " << stringValue4 << std::endl;
+		//// 변수 값 출력
+		//cout << "intValue1: " << intValue1 << std::endl;
+		//cout << "stringValue1: " << stringValue1 << std::endl;
+		//cout << "intValue2: " << intValue2 << std::endl;
+		//cout << "stringValue2: " << stringValue2 << std::endl;
+		//cout << "intValue3: " << intValue3 << std::endl;
+		//cout << "stringValue3: " << stringValue3 << std::endl;
+		//cout << "stringValue4: " << stringValue4 << std::endl;
+		new_client.user = tokens[1];
+		ZeroMemory(data, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
+	}
+	else if (stoi(tokens[0]) == 4) {
+
 	}
 
-
-	recv(new_client.sck, userID, MAX_SIZE, 0);
+	/*recv(new_client.sck, userID, MAX_SIZE, 0);
 	recv(new_client.sck, userPassword, MAX_SIZE, 0);
-	recv(new_client.sck, userName, MAX_SIZE, 0);
+	recv(new_client.sck, userName, MAX_SIZE, 0);*/
 	// Winsock2의 recv 함수. client가 보낸 닉네임을 받음.
-	database(userID, userPassword, userName);
-	new_client.user = string(userID);
-	ZeroMemory(userID, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-	ZeroMemory(userPassword, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-	ZeroMemory(userName, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
+	//ZeroMemory(userID, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
+	//ZeroMemory(userPassword, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
+	//ZeroMemory(userName, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
 
 	string msg = "[공지] " + new_client.user + " 님이 입장했습니다.";
 	cout << msg << endl;

@@ -19,6 +19,7 @@ using std::cin;
 using std::endl;
 using std::string;
 using std::thread;
+using std::to_string;
 
 void gotoXY(int x, int y);
 void printCursor(int x, int y);
@@ -30,6 +31,7 @@ string my_pass;
 string userID;
 string userPassword;
 string userName;
+string data;
 int flag;
 int x;
 int y;
@@ -244,10 +246,9 @@ int main() {
 			}
 			cout << "Connecting..." << endl;
 		}
-		send(client_sock, input.c_str(), input.length(), 0);
-		while (1) {};
+		//send(client_sock, input.c_str(), input.length(), 0);
 		while (flag != -1) {
-			while (flag != -1 || flag != 1) {
+			while (flag != -1) {
 				system("cls");
 				cursor.deleteCursor();
 				window.main();
@@ -275,8 +276,8 @@ int main() {
 						printCursor(x, y);
 					}
 				}
-
-				if (flag == 2) {
+				if (flag == 1)break;
+				else if (flag == 2) {
 					system("cls");
 					window.newMember();
 					cursor.createCursor();
@@ -286,9 +287,12 @@ int main() {
 					cin >> userPassword;
 					gotoXY(30, 21);
 					cin >> userName;
-					send(client_sock, userID.c_str(), userID.length(), 0);
+					data = to_string(flag) + "#" + userID + "#" + userPassword + "#" + userName;
+					send(client_sock, data.c_str(), data.length(), 0);
+					data = "";
+					/*send(client_sock, userID.c_str(), userID.length(), 0);
 					send(client_sock, userPassword.c_str(), userPassword.length(), 0);
-					send(client_sock, userName.c_str(), userName.length(), 0);
+					send(client_sock, userName.c_str(), userName.length(), 0);*/
 				}
 				else if (flag == 3) {
 					x = 26;
@@ -325,6 +329,11 @@ int main() {
 					cin >> userName;
 					gotoXY(x, 21);
 					cin >> userPassword;
+					data= to_string(flag) + "#" + userName + "#" + userPassword;
+					send(client_sock, data.c_str(), data.length(), 0);
+					data = "";
+					/*send(client_sock, userName.c_str(), userID.length(), 0);
+					send(client_sock, userPassword.c_str(), userID.length(), 0);*/
 
 				}
 				else if (flag == 5) {
