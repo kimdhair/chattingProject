@@ -1,0 +1,14 @@
+﻿  client.cpp
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(247,48): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(289,53): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(290,65): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(291,57): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(352,36): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(383,18): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(383,20): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+  코드를 생성하고 있습니다.
+  71 of 211 functions (33.6%) were compiled, the rest were copied from previous compilation.
+    6 functions were new in current compilation
+    14 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  client.vcxproj -> C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\x64\Release\client.exe
