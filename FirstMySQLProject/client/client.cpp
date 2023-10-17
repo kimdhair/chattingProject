@@ -8,6 +8,7 @@
 #include <thread>
 #include <windows.h>
 #include <conio.h>
+#include <vector>
 
 #define UP 72
 #define DOWN 80
@@ -20,10 +21,13 @@ using std::endl;
 using std::string;
 using std::thread;
 using std::to_string;
+using std::vector;
 
 void gotoXY(int x, int y);
 void printCursor(int x, int y);
 int chat_recv();
+void id_data();
+void pw_data();
 
 SOCKET client_sock;
 string my_nick;
@@ -191,6 +195,36 @@ public:
 		cout << "|                                                                |" << endl;
 		cout << "*----------------------------------------------------------------*" << endl;
 	}
+	void login() {
+		cout << "*----------------------------------------------------------------*" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|          CCCCCC      H    H        AAAAA       TTTTTTTT        |" << endl;
+		cout << "|         C            H    H       A     A         TT           |" << endl;
+		cout << "|         C            HHHHHH       AAAAAAA         TT           |" << endl;
+		cout << "|         C            H    H       A     A         TT           |" << endl;
+		cout << "|          CCCCCC      H    H       A     A         TT           |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                     ID:                                        |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                     PW:                                        |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "|                                                                |" << endl;
+		cout << "*----------------------------------------------------------------*" << endl;
+	}
 };
 class CURSOR {
 private:
@@ -220,6 +254,7 @@ int main() {
 	// 실행에 성공하면 0을, 실패하면 그 이외의 값을 반환.
 	// 0을 반환했다는 것은 Winsock을 사용할 준비가 되었다는 의미.
 	int code = WSAStartup(MAKEWORD(2, 2), &wsa);
+	int login = 0;
 
 	if (!code) {
 		/*cout << "사용할 닉네임 입력 >> ";
@@ -248,7 +283,7 @@ int main() {
 		}
 		//send(client_sock, input.c_str(), input.length(), 0);
 		while (flag != -1) {
-			while (flag != -1) {
+			while (login==0) {
 				system("cls");
 				cursor.deleteCursor();
 				window.main();
@@ -276,7 +311,20 @@ int main() {
 						printCursor(x, y);
 					}
 				}
-				if (flag == 1)break;
+				if (flag == 1) {
+					x = 27;
+					y = 17;
+					system("cls");
+					window.login();
+					cursor.createCursor();
+					gotoXY(x, y);
+					cin >> userID;
+					gotoXY(x, 21);
+					cin >> userPassword;
+					data = to_string(flag) + "#" + userID + "#" + userPassword;
+					send(client_sock, data.c_str(), data.length(), 0);
+					//login 결과에 대한 데이터를 리시브 받고 동작할 함수 작성(리시브 받은 데이터의 값이 1인지 0인지 판단 후 각 값에 해당하는 동작)
+				}
 				else if (flag == 2) {
 					system("cls");
 					window.newMember();
@@ -289,7 +337,6 @@ int main() {
 					cin >> userName;
 					data = to_string(flag) + "#" + userID + "#" + userPassword + "#" + userName;
 					send(client_sock, data.c_str(), data.length(), 0);
-					data = "";
 					/*send(client_sock, userID.c_str(), userID.length(), 0);
 					send(client_sock, userPassword.c_str(), userPassword.length(), 0);
 					send(client_sock, userName.c_str(), userName.length(), 0);*/
@@ -329,12 +376,11 @@ int main() {
 					cin >> userName;
 					gotoXY(x, 21);
 					cin >> userPassword;
-					data= to_string(flag) + "#" + userName + "#" + userPassword;
+					data = to_string(flag) + "#" + userName + "#" + userPassword;
 					send(client_sock, data.c_str(), data.length(), 0);
-					data = "";
 					/*send(client_sock, userName.c_str(), userID.length(), 0);
 					send(client_sock, userPassword.c_str(), userID.length(), 0);*/
-
+					id_data();
 				}
 				else if (flag == 5) {
 					x = 31;
@@ -346,11 +392,12 @@ int main() {
 					cin >> userName;
 					gotoXY(x, 21);
 					cin >> userID;
+					data = to_string(flag) + "#" + userName + "#" + userID;
+					send(client_sock, data.c_str(), data.length(), 0);
+					pw_data();
 				}
 			}
-			/*if (flag == 1) {
 			
-			}*/
 		}
 		thread th2(chat_recv);
 
@@ -384,6 +431,72 @@ int chat_recv() {
 		else {
 			cout << "Server Off" << endl;
 			return -1;
+		}
+	}
+}
+
+void id_data() {
+	char buf[MAX_SIZE] = { };
+	vector<string> tokens;
+	string msg;
+
+	while (1) {
+		ZeroMemory(&buf, MAX_SIZE);
+		if (recv(client_sock, buf, MAX_SIZE, 0) > 0) {
+			msg = buf;
+			std::stringstream ss(msg);  // 문자열을 스트림화
+			string user;
+			while (getline(ss, user, '#')) {
+				tokens.push_back(user);
+			}
+			//ss >> user; // 스트림을 통해, 문자열을 공백 분리해 변수에 할당. 보낸 사람의 이름만 user에 저장됨.
+			//if (user != my_nick) cout << buf << endl; // 내가 보낸 게 아닐 경우에만 출력하도록.
+			if (stoi(tokens[0]) == 1) {
+				system("cls");
+				cout << "ID가 조회되지 않습니다."<<endl;
+				Sleep(5000);
+				break;
+			}
+			else {
+				system("cls");
+				cout <<"ID는 "<< tokens[1]<<" 입니다."<<endl;
+				cout << "5초후 메인화면으로 돌아갑니다.";
+				Sleep(5000);
+				break;
+			}
+		}
+	}
+}
+
+void pw_data() {
+	char buf[MAX_SIZE] = { };
+	vector<string> tokens;
+	string msg;
+
+	while (1) {
+		ZeroMemory(&buf, MAX_SIZE);
+		if (recv(client_sock, buf, MAX_SIZE, 0) > 0) {
+			msg = buf;
+			std::stringstream ss(msg);  // 문자열을 스트림화
+			string user;
+			while (getline(ss, user, '#')) {
+				tokens.push_back(user);
+			}
+			//ss >> user; // 스트림을 통해, 문자열을 공백 분리해 변수에 할당. 보낸 사람의 이름만 user에 저장됨.
+			//if (user != my_nick) cout << buf << endl; // 내가 보낸 게 아닐 경우에만 출력하도록.
+			if (stoi(tokens[0]) == 1) {
+				system("cls");
+				cout << "PW가 조회되지 않습니다." << endl;
+				Sleep(5000);
+				break;
+			}
+			else {
+				system("cls");
+				cout << "PW는 " << tokens[1] << " 입니다." << endl;
+				cout << "5초후 메인화면으로 돌아갑니다.";
+				Sleep(5000);
+				break;
+			}
 		}
 	}
 }
