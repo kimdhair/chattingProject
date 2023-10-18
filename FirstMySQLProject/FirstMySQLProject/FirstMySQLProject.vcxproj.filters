@@ -27,5 +27,8 @@
     <ClCompile Include="db_server.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="default_server.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,14 +1,14 @@
 ﻿  client.cpp
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(324,49): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(338,49): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(380,49): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(396,49): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(410,36): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(507,18): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
-C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(507,20): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(321,50): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(337,50): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(378,50): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(394,50): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(411,38): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(551,18): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\client\client.cpp(551,20): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
   코드를 생성하고 있습니다.
-  1 of 298 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  20 of 302 functions ( 6.6%) were compiled, the rest were copied from previous compilation.
+    2 functions were new in current compilation
+    4 functions had inline decision re-evaluated but remain unchanged
   코드를 생성했습니다.
   client.vcxproj -> C:\Users\김도현\Desktop\github\cpp_practice\FirstMySQLProject\x64\Release\client.exe

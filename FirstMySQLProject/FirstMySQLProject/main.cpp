@@ -48,6 +48,8 @@ const string password = "rlaehgus98;"; // 데이터베이스 접속 비밀번호
 std::vector<SOCKET_INFO> sck_list; // 연결된 클라이언트 소켓들을 저장할 배열 선언.
 SOCKET_INFO server_sock; // 서버 소켓에 대한 정보를 저장할 변수 선언.
 int client_count = 0; // 현재 접속해 있는 클라이언트를 count 할 변수 선언.
+int channel_count = 0;
+int flag = 0;
 
 void server_init(); // socket 초기화 함수. socket(), bind(), listen() 함수 실행됨. 자세한 내용은 함수 구현부에서 확인.
 void add_client(); // 소켓에 연결을 시도하는 client를 추가(accept)하는 함수. client accept() 함수 실행됨. 자세한 내용은 함수 구현부에서 확인.
@@ -86,54 +88,51 @@ public:
 		// db 한글 저장을 위한 셋팅 
 		stmt = con->createStatement();
 		stmt->execute("set names euckr");
-		if (stmt) { delete stmt; stmt = nullptr; }
+		//if (stmt) { delete stmt; stmt = nullptr; }
 	};
 	void do_cmd(int cmd) {
 		string serverUserID;
 		string serverUserPW;
-		if (cmd == 1) {
+		if (cmd == 1) {//login에 관한 코드
 			userID = tokens[1];
 			userPassword = tokens[2];
-			stmt = con->createStatement();
+			userName = "";
+			//stmt = con->createStatement();
 			//ID와 PW가 db에 저장되어 있다면 로그인 정보를 off에서 on으로 바꾼다.
 			res = stmt->executeQuery("SELECT ID, PW FROM members WHERE ID='" + userID + "'");//where을 이용해 원하는 조건을 만족하는 행을 출력
 			while (res->next()) {
 				serverUserID = res->getString("ID");
 				serverUserPW = res->getString("PW");
 			}
+			cout << serverUserID << ", " << serverUserPW << endl;
+			cout << userID << ", " << userPassword << endl;
 			if (serverUserID == userID && serverUserPW == userPassword) {
 				stmt->executeUpdate("UPDATE members SET ONOFF='on' WHERE ID='" + userID + "' and PW='" + userPassword + "'");//where을 이용해 원하는 조건을 만족하는 행을 출력
+				data = "1";
+				const char* buf = data.c_str();
+				for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
+					send(sck_list[i].sck, buf, strlen(buf), 0);
+				}
+				cout << "login data send" << endl;
 				//login 성공시 client로 성공했다는 데이터 전송코드 작성
 			}
-			//실패했을경우 실패했다는 데이터 전송코드 작성
-
-			if (res->next() == NULL) {
-				error = 1;
-				cout << error << endl;
-				data = to_string(error);
-				const char* buf = data.c_str();
-				for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
-					send(sck_list[i].sck, buf, strlen(buf), 0);
-				}
-				error = 0;
-			}
 			else {
-				userID = res->getString("ID");
-				cout << userID << endl;
-				data = to_string(error) + "#" + userID;
+				data = "0";
 				const char* buf = data.c_str();
 				for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
 					send(sck_list[i].sck, buf, strlen(buf), 0);
 				}
 			}
-			if (stmt) { delete stmt; stmt = nullptr; }
+			//실패했을경우 실패했다는 데이터 전송코드 작성
+			//if (stmt) { delete stmt; stmt = nullptr; }
+			//delete con;
 		}
 		else if (cmd == 2) {//회원가입에 대한 정보를 클라이언트에서 받아올때 데이터의 헤더번호가 2일경우 members테이블에 데이터 저장
 
 			userID = tokens[1];
 			userPassword = tokens[2];
 			userName = tokens[3];
-
+			cout << userID << ", " << userPassword << ", " << userName << ", " << endl;
 			pstmt = con->prepareStatement("INSERT INTO members(ID, PW, USERNAME) VALUES(?,?,?)"); // INSERT
 
 			pstmt->setString(1, userID);
@@ -143,13 +142,14 @@ public:
 
 			if (pstmt) { delete pstmt; pstmt = nullptr; }
 			//delete pstmt;
-			delete con;
+			//delete con;
 		}
 
 		if (cmd == 4) {//클라이언트에게 받은 데이터의 헤더가 4일 경우 userID를 members 테이블에서 호출
 			userName = tokens[1];
 			userPassword = tokens[2];
-			stmt = con->createStatement();
+			userID = "";
+			//stmt = con->createStatement();
 			res = stmt->executeQuery("SELECT ID FROM members WHERE PW='" + userPassword + "' and USERNAME='" + userName + "'");//where을 이용해 원하는 조건을 만족하는 행을 출력
 			if (res->next() == NULL) {
 				error = 1;
@@ -170,13 +170,15 @@ public:
 					send(sck_list[i].sck, buf, strlen(buf), 0);
 				}
 			}
-			if (stmt) { delete stmt; stmt = nullptr; }
+			//if (stmt) { delete stmt; stmt = nullptr; }
+			//delete con;
 			//size_t rowsCount() const = 0; where 조건에 맞지 않는 경우 0개의 행을 불러오기때문에 rowsCount가 0일경우 오류
 		}
 		else if (cmd == 5) {//클라이언트에게 받은 데이터의 헤더가 5일 경우 userPassword를 members 테이블에서 호출
 			userName = tokens[1];
 			userID = tokens[2];
-			stmt = con->createStatement();
+			userPassword = "";
+			//stmt = con->createStatement();
 			res = stmt->executeQuery("SELECT PW FROM members WHERE ID='" + userID + "' and USERNAME='" + userName + "'");
 			if (res->next() == NULL) {
 				error = 1;
@@ -197,24 +199,10 @@ public:
 					send(sck_list[i].sck, buf, strlen(buf), 0);
 				}
 			}
-			if (stmt) { delete stmt; stmt = nullptr; }
+			//if (stmt) { delete stmt; stmt = nullptr; }
+			//delete con;
 		}
-
 	}
-	//void save(int cmd) {
-	//	if (cmd == 2) {//회원가입에 대한 정보를 클라이언트에서 받아올때 데이터의 헤더번호가 2일경우 members테이블에 데이터 저장
-	//		pstmt = con->prepareStatement("INSERT INTO members(ID, PW, USERNAME) VALUES(?,?,?)"); // INSERT
-
-	//		pstmt->setString(1, userID);
-	//		pstmt->setString(2, userPassword);
-	//		pstmt->setString(3, userName);
-	//		pstmt->execute();
-
-	//		if (pstmt) { delete pstmt; pstmt = nullptr; }
-	//		//delete pstmt;
-	//		delete con;
-	//	}
-	//}
 };
 
 DATABASE db;
@@ -236,13 +224,6 @@ int main()
 			// 인원 수 만큼 thread 생성해서 각각의 클라이언트가 동시에 소통할 수 있도록 함.
 			th1[i] = std::thread(add_client);
 		}
-		//std::thread th1(add_client); // 이렇게 하면 하나의 client만 받아짐...
-		cout << "continue" << endl;
-		while (1) {
-			check_cmd();
-		}
-		cout << "end" << endl;
-		//check_command();
 
 		while (1) { // 무한 반복문을 사용하여 서버가 계속해서 채팅 보낼 수 있는 상태를 만들어 줌. 반복문을 사용하지 않으면 한 번만 보낼 수 있음.
 			string text, msg = "";
@@ -273,61 +254,6 @@ int main()
 
 }
 
-//데이터 베이스에 대한 함수를 클래스로 선언하고 각 용도에 맞는 함수를 생성해야함
-
-//void database(string userID, string userPassword, string userName) {
-//	// MySQL Connector/C++ 초기화
-//	sql::mysql::MySQL_Driver* driver; // 추후 해제하지 않아도 Connector/C++가 자동으로 해제해 줌
-//	sql::Connection* con;
-//	sql::Statement* stmt;
-//	sql::PreparedStatement* pstmt;
-//
-//	try {
-//		driver = sql::mysql::get_mysql_driver_instance();
-//		con = driver->connect(server, username, password);
-//	}
-//	catch (sql::SQLException& e) {
-//		cout << "Could not connect to server. Error message: " << e.what() << endl;
-//		exit(1);
-//	}
-//
-//	// 데이터베이스 선택
-//	con->setSchema("chattingProject");
-//
-//	// db 한글 저장을 위한 셋팅 
-//	stmt = con->createStatement();
-//	stmt->execute("set names euckr");
-//	if (stmt) { delete stmt; stmt = nullptr; }
-//
-//	// 데이터베이스 쿼리 실행
-//	//stmt = con->createStatement();
-//	//stmt->execute("DROP TABLE IF EXISTS members"); // DROP
-//	//cout << "Finished dropping table (if existed)" << endl;
-//	//stmt->execute("CREATE TABLE members (id VARCHAR(20) PRIMARY KEY, name VARCHAR(10) NOT NULL, password VARCHAR(20) NOT NULL, mbti VARCHAR(10));"); // CREATE
-//	//cout << "Finished creating table" << endl;
-//
-//	//delete stmt;
-//	pstmt = con->prepareStatement("INSERT INTO members(userID, userPassword, userName) VALUES(?,?,?)"); // INSERT
-//
-//	pstmt->setString(1, userID);
-//	pstmt->setString(2, userPassword);
-//	pstmt->setString(3, userName);
-//	pstmt->execute();
-//	cout << "One row inserted." << endl;
-//
-//	/*pstmt->setString(1, "b");
-//	pstmt->setString(2, "bc");
-//	pstmt->setString(3, "23");
-//	pstmt->execute();
-//	cout << "One row inserted." << endl;*/
-//
-//
-//	// MySQL Connector/C++ 정리
-//	delete pstmt;
-//	delete con;
-//
-//	//return 0;
-//}
 
 void server_init() {
 	server_sock.sck = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -358,10 +284,10 @@ void check_cmd() {
 	//char buf[MAX_SIZE] = {};
 
 	std::thread th(recv_cmd, client_count);
-
+	client_count++;
 	//data = recv_cmd(client_count);
-	std::unique_lock<std::mutex> lck(mtx);
-	std::cout << "Wait Data" << std::endl;
+	//std::unique_lock<std::mutex> lck(mtx);
+	/*std::cout << "Wait Data" << std::endl;
 
 	cv.wait(lck, [] { return ready; });
 	std::cout << "Wait end" << std::endl;
@@ -371,42 +297,13 @@ void check_cmd() {
 
 	while (getline(ss, token, '#')) {
 		tokens.push_back(token);
-	}
-	db.do_cmd(stoi(tokens[0]));
-	ZeroMemory(&recv_data, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
+	}*/
+	//db.do_cmd(stoi(tokens[0]));
+	//ZeroMemory(&recv_data, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
 	th.join();
-	//if (stoi(tokens[0]) == 2) {
-	//	// 각 데이터 값을 변수에 할당
-	//	database(tokens[1], tokens[2], tokens[3]);
-	//	//int intValue1 = std::stoi(tokens[0]);//cmd
-	//	//string stringValue1 = tokens[1];//id
-	//	//int intValue2 = std::stoi(tokens[2]);//pw
-	//	//string stringValue2 = tokens[3];//name
-	//	//int intValue3 = std::stoi(tokens[4]);//room_num
-	//	//string stringValue3 = tokens[5];//room_name
-	//	//string stringValue4 = tokens[6];//chatting_log
-
-	//	//// 변수 값 출력
-	//	//cout << "intValue1: " << intValue1 << std::endl;
-	//	//cout << "stringValue1: " << stringValue1 << std::endl;
-	//	//cout << "intValue2: " << intValue2 << std::endl;
-	//	//cout << "stringValue2: " << stringValue2 << std::endl;
-	//	//cout << "intValue3: " << intValue3 << std::endl;
-	//	//cout << "stringValue3: " << stringValue3 << std::endl;
-	//	//cout << "stringValue4: " << stringValue4 << std::endl;
-	//	new_client.user = tokens[1];
-	//}
 }
 
 void add_client() {
-	/*vector<string> tokens;
-	string userID;
-	string userPassword;
-	string userName;*/
-	/*string id;
-	string pw;
-	string name;*/
-
 	SOCKADDR_IN addr = {};
 	int addrsize = sizeof(addr);
 	char data[MAX_SIZE] = { };
@@ -417,66 +314,33 @@ void add_client() {
 
 	new_client.sck = accept(server_sock.sck, (sockaddr*)&addr, &addrsize);
 
-	//리시브 데이터 함수로 따로 만들것
-	//recv(new_client.sck, data, MAX_SIZE, 0);
-	//istringstream ss(data);
-	//string token;
-	//while (getline(ss, token, '#')) {
-	//	tokens.push_back(token);
-	//}
-	//if (stoi(tokens[0]) == 2) {
-	//	userID = tokens[1];
-	//	userPassword = tokens[2];
-	//	userName = tokens[3];
-	//	// 각 데이터 값을 변수에 할당
-	//	database(tokens[1], tokens[2], tokens[3]);
-	//	//int intValue1 = std::stoi(tokens[0]);//cmd
-	//	//string stringValue1 = tokens[1];//id
-	//	//int intValue2 = std::stoi(tokens[2]);//pw
-	//	//string stringValue2 = tokens[3];//name
-	//	//int intValue3 = std::stoi(tokens[4]);//room_num
-	//	//string stringValue3 = tokens[5];//room_name
-	//	//string stringValue4 = tokens[6];//chatting_log
-
-	//	//// 변수 값 출력
-	//	//cout << "intValue1: " << intValue1 << std::endl;
-	//	//cout << "stringValue1: " << stringValue1 << std::endl;
-	//	//cout << "intValue2: " << intValue2 << std::endl;
-	//	//cout << "stringValue2: " << stringValue2 << std::endl;
-	//	//cout << "intValue3: " << intValue3 << std::endl;
-	//	//cout << "stringValue3: " << stringValue3 << std::endl;
-	//	//cout << "stringValue4: " << stringValue4 << std::endl;
-	//	new_client.user = tokens[1];
-	//	ZeroMemory(data, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-	//}
-	//else if (stoi(tokens[0]) == 4) {
-
-	//}
-
-	///*recv(new_client.sck, userID, MAX_SIZE, 0);
-	//recv(new_client.sck, userPassword, MAX_SIZE, 0);
-	//recv(new_client.sck, userName, MAX_SIZE, 0);*/
-	// Winsock2의 recv 함수. client가 보낸 닉네임을 받음.
-	//ZeroMemory(userID, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-	//ZeroMemory(userPassword, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-	//ZeroMemory(userName, MAX_SIZE); // addr의 메모리 영역을 0으로 초기화
-
 	cout << "++client_coun" << endl;
-	client_count++; // client 수 증가.
 	string msg = to_string(client_count) + "번 클라이언트가 연결됐습니다.";
 	cout << msg << endl;
 	sck_list.push_back(new_client); // client 정보를 답는 sck_list 배열에 새로운 client 추가
 
-	//std::thread th(recv_msg, client_count);
+	//while (1) {
+	//	if (flag == 0) {
+	//	}
+	//	else if (flag == 1) {
+	//		std::thread th2(recv_msg);//로그인 이후 채팅에 대한 스레드
+	//		th2.join();
+	//	}
+	//}
+
+	std::thread th1(check_cmd);//로그인까지의 스레드
+	th1.join();
+	//client_count++; // client 수 증가.
+	channel_count++;
 	// 다른 사람들로부터 오는 메시지를 계속해서 받을 수 있는 상태로 만들어 두기.
 
 	//cout << "[공지] 현재 접속자 수 : " << client_count << "명" << endl;
 	//send_msg(msg.c_str()); // c_str : string 타입을 const chqr* 타입으로 바꿔줌.
 
-	//th.join();
 }
 
 void send_msg(const char* msg) {
+	cout << "msg출력: "<<msg << endl;
 	for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
 		send(sck_list[i].sck, msg, MAX_SIZE, 0);
 	}
@@ -507,23 +371,42 @@ void recv_msg(int idx) {
 }
 
 void recv_cmd(int idx) {
-	//char buf[MAX_SIZE] = {};
+	char buf[MAX_SIZE] = { };
+	string msg = "";
 	cout << "1 idx " << idx << endl;
 	while (1)
 	{
+		ZeroMemory(&recv_data, MAX_SIZE);
+		ZeroMemory(&buf, MAX_SIZE);
+		tokens = {};
 		cout << "sck_list.size()" << sck_list.size() << ", idx " << idx << endl;
-		if (sck_list.size() > idx) {//chanel_count>idx 한번 해보기
-			cout << "2 idx " << idx << endl;
-			//ZeroMemory(&recv_data, MAX_SIZE);
-			if (recv(sck_list[idx].sck, recv_data, MAX_SIZE, 0) > 0) {
-				cout << "recv2 " << recv_data << endl;
-				std::unique_lock<std::mutex> lck(mtx);
-				ready = true;
-				cv.notify_all();
-				cout << "notify_all" << endl;
-				break;
+		//if (sck_list[idx].sck!=INVALID_SOCKET) {
+		cout << "channel_count " << channel_count << endl;
+		//ZeroMemory(&recv_data, MAX_SIZE);
+		if (recv(sck_list[idx].sck, recv_data, MAX_SIZE, 0) > 0) {
+			cout << "recv2 " << recv_data << endl;
+			//std::unique_lock<std::mutex> lck(mtx);
+			istringstream ss(recv_data);
+			string token;
+
+			while (getline(ss, token, '#')) {
+				tokens.push_back(token);
 			}
+			if (stoi(tokens[0]) >= 1 && stoi(tokens[0]) <= 5) {
+				db.do_cmd(stoi(tokens[0]));
+			}
+			else if(stoi(tokens[0])==6){
+				msg = tokens[1] + " : " + tokens[2];
+				cout <<  msg << endl;
+				send_msg(msg.c_str());
+			}
+			cout << "notify_all" << endl;
 		}
+		else {
+			del_client(idx);
+			break;
+		}
+		//}
 		Sleep(1000);
 	}
 }
