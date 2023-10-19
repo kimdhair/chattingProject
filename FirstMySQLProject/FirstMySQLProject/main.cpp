@@ -32,7 +32,9 @@ vector<string> tokens;
 string userID;
 string userPassword;
 string userName;
-char recv_data[MAX_SIZE] = {};
+string serverUserID;
+string serverUserPW;
+//char recv_data[MAX_SIZE] = {};
 char recv_buf[MAX_SIZE] = {};
 
 struct SOCKET_INFO { // 연결된 소켓 정보에 대한 틀 생성
@@ -91,9 +93,25 @@ public:
 		//if (stmt) { delete stmt; stmt = nullptr; }
 	};
 	void do_cmd(int cmd) {
-		string serverUserID;
-		string serverUserPW;
-		if (cmd == 1) {//login에 관한 코드
+		if (cmd == -2) {//클라이언트 강제 종료시 동작 코드
+			stmt->executeUpdate("UPDATE members SET ONOFF='off' WHERE ID='" + serverUserID + "' and PW='" + serverUserPW + "'");
+			cout << serverUserID + "가 종료했습니다." << endl;
+			/*serverUserID.erase(serverUserID.begin());
+			serverUserPW.erase(serverUserPW.begin());*/
+		}
+		if (cmd == -1) {//logout에 관한 코드
+			userID = tokens[1];
+			userPassword = tokens[2];
+			userName = "";
+			stmt->executeUpdate("UPDATE members SET ONOFF='off' WHERE ID='" + userID + "' and PW='" + userPassword + "'");
+			data = "-1#" + userID;
+			const char* buf = data.c_str();
+			for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
+				send(sck_list[i].sck, buf, strlen(buf), 0);
+			}
+			cout << "send logout data" << endl;
+		}
+		else if (cmd == 1) {//login에 관한 코드
 			userID = tokens[1];
 			userPassword = tokens[2];
 			userName = "";
@@ -101,8 +119,10 @@ public:
 			//ID와 PW가 db에 저장되어 있다면 로그인 정보를 off에서 on으로 바꾼다.
 			res = stmt->executeQuery("SELECT ID, PW FROM members WHERE ID='" + userID + "'");//where을 이용해 원하는 조건을 만족하는 행을 출력
 			while (res->next()) {
-				serverUserID = res->getString("ID");
-				serverUserPW = res->getString("PW");
+				serverUserID= res->getString("ID");
+				serverUserPW= res->getString("PW");
+				/*serverUserID.push_back(res->getString("ID"));
+				serverUserPW.push_back(res->getString("PW"));*/
 			}
 			cout << serverUserID << ", " << serverUserPW << endl;
 			cout << userID << ", " << userPassword << endl;
@@ -340,7 +360,7 @@ void add_client() {
 }
 
 void send_msg(const char* msg) {
-	cout << "msg출력: "<<msg << endl;
+	cout << "msg출력: " << msg << endl;
 	for (int i = 0; i < client_count; i++) { // 접속해 있는 모든 client에게 메시지 전송
 		send(sck_list[i].sck, msg, MAX_SIZE, 0);
 	}
@@ -371,6 +391,7 @@ void recv_msg(int idx) {
 }
 
 void recv_cmd(int idx) {
+	char recv_data[MAX_SIZE] = {};
 	char buf[MAX_SIZE] = { };
 	string msg = "";
 	cout << "1 idx " << idx << endl;
@@ -392,14 +413,23 @@ void recv_cmd(int idx) {
 			while (getline(ss, token, '#')) {
 				tokens.push_back(token);
 			}
+			cout << "tokens 출력1: " << tokens[0] << endl;
 			if (stoi(tokens[0]) >= 1 && stoi(tokens[0]) <= 5) {
 				db.do_cmd(stoi(tokens[0]));
 			}
-			else if(stoi(tokens[0])==6){
-				msg = tokens[1] + " : " + tokens[2];
-				cout <<  msg << endl;
+			else if (stoi(tokens[0]) == 6) {
+				msg = "6#" + tokens[1] + "#" + tokens[2];
+				cout << msg << endl;
 				send_msg(msg.c_str());
 			}
+			else if (stoi(tokens[0]) == -1) {
+				db.do_cmd(stoi(tokens[0]));
+				//db클래스에 -1의 경우 db테이블에 onoff속성을 off로 변경하는 코드 작성
+				/*msg = tokens[1] + "#logout";
+				cout << msg << endl;
+				send_msg(msg.c_str());*/
+			}
+			cout << "tokens 출력2: " << tokens[0] << endl;
 			cout << "notify_all" << endl;
 		}
 		else {
@@ -414,6 +444,7 @@ void recv_cmd(int idx) {
 void del_client(int idx) {
 	cout << "del_client" << endl;
 	closesocket(sck_list[idx].sck);
+	db.do_cmd(-2);
 	//sck_list.erase(sck_list.begin() + idx); // 배열에서 클라이언트를 삭제하게 될 경우 index가 달라지면서 런타임 오류 발생....ㅎ
 	client_count--;
 }

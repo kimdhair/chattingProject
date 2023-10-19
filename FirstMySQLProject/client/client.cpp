@@ -396,8 +396,6 @@ int main() {
 					}
 				}
 				system("cls");
-				cout << "login 성공!" << endl;
-				system("cls");
 			}
 			else if (login == 1) {
 				thread th2(chat_recv);
@@ -406,9 +404,17 @@ int main() {
 					string text;
 					string text_data;
 					std::getline(cin, text);
-					text_data = "6#" + userID + "#" + text;
-					const char* buffer = text_data.c_str(); // string형을 char* 타입으로 변환
-					send(client_sock, buffer, strlen(buffer), 0);
+					if (text == "로그아웃") {
+						text_data = "-1#" + userID + "#" + userPassword;
+						const char* buffer = text_data.c_str(); // string형을 char* 타입으로 변환
+						send(client_sock, buffer, strlen(buffer), 0);
+						break;
+					}
+					else {
+						text_data = "6#" + userID + "#" + text;
+						const char* buffer = text_data.c_str(); // string형을 char* 타입으로 변환
+						send(client_sock, buffer, strlen(buffer), 0);
+					}
 				}
 				th2.join();
 			}
@@ -437,15 +443,27 @@ int main() {
 int chat_recv() {
 	char buf[MAX_SIZE] = { };
 	string msg;
+	vector <string> user_token;
 
 	while (1) {
+		user_token = {};
 		ZeroMemory(&buf, MAX_SIZE);
 		if (recv(client_sock, buf, MAX_SIZE, 0) > 0) {
-			//msg = buf;
-			cout << buf << endl;
-			//std::stringstream ss(msg);  // 문자열을 스트림화
-			//string user;
-			//ss >> user; // 스트림을 통해, 문자열을 공백 분리해 변수에 할당. 보낸 사람의 이름만 user에 저장됨.
+			msg = buf;
+			std::stringstream ss(msg);  // 문자열을 스트림화
+			string user;
+			while (getline(ss, user, '#')) {
+				user_token.push_back(user);
+			}
+			if (stoi(user_token[0]) == -1 && user_token[1] == userID) {
+				login = 0;
+				break;
+			}
+			else {
+				//if (user_token[1] != userID) {
+					cout << user_token[1] + " : " + user_token[2] << endl;
+				//}
+			}
 			//if (user != userID) cout << buf << endl; // 내가 보낸 게 아닐 경우에만 출력하도록.
 		}
 		else {
@@ -474,14 +492,14 @@ void id_data() {
 			if (stoi(tokens[0]) == 1) {
 				system("cls");
 				cout << "ID가 조회되지 않습니다." << endl;
-				Sleep(5000);
+				Sleep(3000);
 				break;
 			}
 			else {
 				system("cls");
 				cout << "ID는 " << tokens[1] << " 입니다." << endl;
-				cout << "5초후 메인화면으로 돌아갑니다.";
-				Sleep(5000);
+				cout << "3초후 메인화면으로 돌아갑니다.";
+				Sleep(3000);
 				break;
 			}
 		}
@@ -507,14 +525,14 @@ void pw_data() {
 			if (stoi(tokens[0]) == 1) {
 				system("cls");
 				cout << "PW가 조회되지 않습니다." << endl;
-				Sleep(5000);
+				Sleep(3000);
 				break;
 			}
 			else {
 				system("cls");
 				cout << "PW는 " << tokens[1] << " 입니다." << endl;
-				cout << "5초후 메인화면으로 돌아갑니다.";
-				Sleep(5000);
+				cout << "3초후 메인화면으로 돌아갑니다.";
+				Sleep(3000);
 				break;
 			}
 		}
@@ -532,15 +550,15 @@ void login_data() {
 				system("cls");
 				cout << "login 성공!" << endl;
 				login = 1;
-				Sleep(5000);
+				Sleep(1000);
 				break;
 			}
 			else if (s == "0") {
 				system("cls");
 				cout << "로그인 실패" << endl;
-				cout << "5초후 메인화면으로 돌아갑니다.";
+				cout << "1초후 메인화면으로 돌아갑니다.";
 				login = 0;
-				Sleep(5000);
+				Sleep(1000);
 				break;
 			}
 		}
