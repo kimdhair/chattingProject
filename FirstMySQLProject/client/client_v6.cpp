@@ -15,16 +15,17 @@ using std::cin;
 using std::cout;
 using std::endl;
 using std::stoi;
+using std::mutex;
 using std::string;
 using std::vector;
 using std::thread;
 using std::getline;
 using std::to_string;
+using std::unique_lock;
 using std::stringstream;
 using std::istringstream;
-std::mutex mtx;
-std::condition_variable cv;
-bool ready = false;
+using std::condition_variable;
+
 
 enum Get {
 	Xcmd,//0
@@ -41,7 +42,8 @@ enum Cmdlist {
 	로그인,//대화를 아이디와 비교하고, 대화2를 패스워드와 비교 2
 	방목록가져오기,//방목록을 대화로 보냄 3
 	방채팅목록가져오기,// 4
-	로그인한사람명단//5
+	로그인한사람명단,//5
+	로그아웃
 };
 enum LoginStatus {
 	LOGOFF,
@@ -90,13 +92,17 @@ MessageP decode(const string& str) {
 
 SOCKET client_sock;
 MessageP player;
-bool yes = false; //cout->서버가 보내준 정보를 띄우기->내가 입력하기 순서를 위해 사용 ex)DM,방바꾸기
+
+mutex mtx;
+condition_variable cv;
+bool ready = false;
 
 int chat_recv();
 void login();
 void changemode();
 void chattingmode();
 void moniter(MessageP reply);
+
 int main() {
 	WSADATA wsa;
 	int code = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -131,24 +137,35 @@ int chat_recv() {
 		int len = recv(client_sock, buffer, MAX_SIZE, 0);
 		if (len > 0) {
 			reply = decode(buffer);
-			moniter(reply);
-			cout << reply.room << " - " + reply.id << " : " + reply.say << " say2= " << reply.say2 << endl;
+			if (reply.to == default_VAL || reply.id == "server") {
+				cout << reply.room << " - " + reply.id << " : " + reply.say << endl;
+			}
+			else {
+				cout << "<DM> - " + reply.id << " : " + reply.say << endl;
+			}
 			if (reply.id == "server") {
-				if (reply.say2 == to_string(YES)) {//특정 행동에 대한 응답을 받음
-					if (reply.say == "로그인 성공" || reply.say == "입력하신 회원정보로 가입합니다.") {
-						player.lock = to_string(LOGON);
-					}
+				if (reply.say == "로그인 성공" || reply.say == "입력하신 회원정보로 가입합니다.") {
+					player.lock = to_string(LOGON);
+					unique_lock<std::mutex> lck(mtx);
+					ready = true;
+					cv.notify_all();
 				}
-				std::unique_lock<std::mutex> lck(mtx);
-				ready = true;
-				cv.notify_all();
+				else if (reply.say == "비밀번호가 맞지 않습니다.") {
+					unique_lock<std::mutex> lck(mtx);
+					ready = true;
+					cv.notify_all();
+				}
+				else if (reply.say == "이미 로그인 된 계정입니다.") {
+					unique_lock<std::mutex> lck(mtx);
+					ready = true;
+					cv.notify_all();
+				}
 			}
 		}
 		else if (len < 0) {
 			cout << "Server Off" << endl;
 			return -1;
 		}
-
 	}
 }
 void login() {
@@ -159,21 +176,19 @@ void login() {
 		cout << "pw를 입력하세요.";
 		cin >> player.say;
 		getline(cin, blink);
-		cout << "login 함수 : ";
 		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
-		/*while (yes != true) {}
-		yes = false;*/
-		std::unique_lock<std::mutex> lck(mtx);
-		std::cout << "Wait Data" << std::endl;
 
+		unique_lock<std::mutex> lck(mtx);
+		cout << "Wait Data" << std::endl;
 		cv.wait(lck, [] { return ready; });
-		std::cout << "Wait end" << std::endl;
+		cout << "Wait end" << std::endl;
 		ready = false;
 
 		if (player.lock == to_string(LOGON)) {
-			return changemode();
+			break;
 		}
 	}
+	return changemode();
 }
 void changemode() {
 	cout << "사용가능한 명령어: @changeroom, @DM , @exit " << endl;
@@ -183,28 +198,25 @@ void changemode() {
 	player.say = text;
 	if (player.say == "@changeroom") {
 		player.cmd = to_string(방목록가져오기);
-		cout << "현재 존재하는 방의 목록입니다." << endl;
-		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
-		while (yes != true) {}
-		yes = false;
 		cout << "입장하고싶은 방의 이름을 입력해주시거나 새로 만들 방의 이름을 입력해주세요." << endl;
+		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
 		cin >> player.room;
 		return chattingmode();
 	}
 	else if (player.say == "@DM") {
 		player.cmd = to_string(로그인한사람명단);
-		while (yes != true) {}
-		yes = false;
-		cout << "DM을 보낼 회원의 아이디를 입력해주세요." << endl;
 		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
-
+		cout << "DM을 보낼 회원의 아이디를 입력해주세요." << endl;
 		cin >> player.to;
 		return chattingmode();
 	}
 	else if (player.say == "@exit") {
-		cout << "다음에 또 만나요!!!" << endl;
+		player.cmd = to_string(로그아웃);
+		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
+		cout << "로그아웃 완료" << endl;
 		MessageP new_player;
 		player = new_player;
+		Sleep(1000);
 		return login();
 	}
 	else {
@@ -213,13 +225,21 @@ void changemode() {
 	}
 }
 void chattingmode() {
+	string blink;
+	getline(cin, blink);
+	system("cls");
 	player.cmd = to_string(일반대화);
 	string headline = player.room;
-	if (player.to != "0") {
+	if (player.to != default_VAL) {
 		headline = "DM - " + player.to;
 	}
 	headline += " @out를 누르면 채팅모드를 벗어납니다.";
 	cout << headline << endl;
+	if (player.to == default_VAL) {
+		player.cmd = to_string(방채팅목록가져오기);
+		send(client_sock, player.pack().c_str(), player.pack().length(), 0);
+		player.cmd = to_string(일반대화);
+	}
 	while (player.say != "@out") {
 		string text;
 		std::getline(cin, text);
@@ -228,6 +248,7 @@ void chattingmode() {
 	}
 	player.room = "자유채널";//나가면 자유채널행
 	player.to = "0";//DM인 경우에 해제함
+	Sleep(1000);
 	return changemode();
 }
 void moniter(MessageP reply) {
