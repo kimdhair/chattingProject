@@ -33,4 +33,4 @@
 - 로그인
   - 사용자의 회원가입 정보를 DB에 저장해 로그인 데이터로 사용
 
-<img src="https://github.com/kimdhair/chattingProject/blob/main/img/%ED%81%B4%EB%9D%BC%EC%9D%B4%EC%96%B8%ED%8A%B8%20%EB%A1%9C%EA%B7%B8%EC%9D%B8.png?raw=true" width="40%"><img src="https://github.com/kimdhair/chattingProject/blob/main/img/%EC%84%9C%EB%B2%84%20%EB%A1%9C%EA%B7%B8%EC%9D%B8.png?raw=true" width="40%"></img>
+<img src="https://github.com/kimdhair/chattingProject/blob/main/img/%ED%81%B4%EB%9D%BC%EC%9D%B4%EC%96%B8%ED%8A%B8%20%EB%A1%9C%EA%B7%B8%EC%9D%B8.png?raw=true" width="80%"><img src="https://github.com/kimdhair/chattingProject/blob/main/img/%EC%84%9C%EB%B2%84%20%EB%A1%9C%EA%B7%B8%EC%9D%B8.png?raw=true" width="80%"></img>
